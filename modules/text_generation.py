@@ -69,9 +69,9 @@ def _generate_reply(question, state, stopping_strings=None, is_chat=False, escap
     last_update = -1
     reply = ''
     is_stream = state['stream']
-    if len(all_stop_strings) > 0 and not state['stream']:
-        state = copy.deepcopy(state)
-        state['stream'] = True
+    # if len(all_stop_strings) > 0 and not state['stream']:
+    #     state = copy.deepcopy(state)
+    #     state['stream'] = True
 
     # Generate
     for reply in generate_func(question, original_question, seed, state, stopping_strings, is_chat=is_chat):
@@ -140,7 +140,7 @@ def decode(output_ids, skip_special_tokens=True):
     if shared.tokenizer is None:
         raise ValueError('No tokenizer is loaded')
 
-    return shared.tokenizer.decode(output_ids, skip_special_tokens)
+    return shared.tokenizer.decode(output_ids, skip_special_tokens=skip_special_tokens)
 
 
 def get_encoded_length(prompt):
@@ -218,6 +218,8 @@ def get_reply_from_output_ids(output_ids, input_ids, original_question, state, i
     if shared.is_seq2seq:
         reply = decode(output_ids, state['skip_special_tokens'])
     else:
+        if len(output_ids.shape) == 2:
+            output_ids = output_ids[0]
         new_tokens = len(output_ids) - len(input_ids[0])
         reply = decode(output_ids[-new_tokens:], state['skip_special_tokens'])
         # Prevent LlamaTokenizer from skipping a space
@@ -332,7 +334,8 @@ def generate_reply_HF(question, original_question, seed, state, stopping_strings
         # Generate the entire reply at once.
         if not state['stream']:
             with torch.no_grad():
-                output = shared.model.generate(**generate_params)[0]
+                gen_output = shared.model.generate(return_dict_in_generate=True, output_scores=True, **generate_params)
+                output = gen_output[0]
                 if cuda:
                     output = output.cuda()
 

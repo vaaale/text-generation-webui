@@ -35,9 +35,22 @@ class LogitsBiasProcessor(LogitsProcessor):
 
 
 class LogprobProcessor(LogitsProcessor):
+    _counter = 0
     def __init__(self, logprobs=None):
+        self.id = LogprobProcessor._counter
+        LogprobProcessor._counter += 1
         self.logprobs = logprobs
         self.token_alternatives = {}
+
+        self.tokens = []
+        self.tokens_ids = []
+        self.token_logprobs = []
+        self.top_probs = []
+        self.top_toks = []
+        self.top_inds = []
+        self.prev_logits = None
+        self.prev_top_values = None
+        self.prev_top_ind = None
 
     def __call__(self, input_ids: torch.LongTensor, logits: torch.FloatTensor) -> torch.FloatTensor:
         if self.logprobs is not None:  # 0-5
@@ -46,11 +59,28 @@ class LogprobProcessor(LogitsProcessor):
             top_tokens = [decode(tok) for tok in top_indices[0]]
             top_probs = [float(x) for x in top_values[0]]
             self.token_alternatives = dict(zip(top_tokens, top_probs))
+
+            if self.prev_logits is not None:
+                prev_gen_ind = input_ids[0][-1].item()
+                prev_gen_prob = self.prev_logits[prev_gen_ind].item()
+                self.tokens_ids.append(prev_gen_ind)
+                self.tokens.append(decode(torch.tensor(prev_gen_ind)))
+                self.token_logprobs.append(prev_gen_prob)
+
+            self.prev_logits = log_e_probabilities[0]
+            self.prev_top_values = top_values
+            self.prev_top_ind = top_indices
+
+            self.top_probs.append(top_probs)
+            self.top_toks.append(top_tokens)
+            self.top_inds.append([v.item() for v in top_indices[0]])
+
             debug_msg(repr(self))
         return logits
 
     def __repr__(self):
-        return f"<{self.__class__.__name__}(logprobs={self.logprobs}, token_alternatives={self.token_alternatives})>"
+        return f"<{self.__class__.__name__}[{LogprobProcessor._counter} - {self.id}](logprobs={self.logprobs}, token_alternatives={self.token_alternatives})>"
+
 
 
 def convert_logprobs_to_tiktoken(model, logprobs):
@@ -494,17 +524,46 @@ def completions(body: dict, is_legacy: bool = False):
         if answer and answer[0] == ' ':
             answer = answer[1:]
 
-        completion_token_count = len(encode(answer)[0])
+        gen_tok_ids = encode(answer)[0][1:]
+        completion_token_count = len(gen_tok_ids)
         total_completion_token_count += completion_token_count
         stop_reason = "stop"
         if token_count + completion_token_count >= req_params['truncation_length'] or completion_token_count >= max_tokens:
             stop_reason = "length"
 
+        logprobs = None
+        if logprob_proc:
+            top_logprobs = [{tok: p for tok, p in zip(tokens, probs)} for tokens, probs in zip(logprob_proc.top_toks, logprob_proc.top_probs)][:-1]
+            tokens = logprob_proc.tokens
+            log_probs = logprob_proc.token_logprobs
+            text_offsets = []
+            offset = 0
+            for i, tok in enumerate(tokens):
+                if tok in ['<0x0A>']:
+                    tok = '\n'
+                tmp = answer[offset:]
+                if tok in stopping_strings:
+                    break
+                ind = tmp.find(tok)
+                if ind == -1 and i == (len(tokens) - 1):
+                    break
+
+                text_offsets.append(len(prompt) + (offset + ind))
+                offset += ind
+
+            logprobs = {
+                "tokens": tokens,
+                "token_logprobs": log_probs,
+                "top_logprobs": top_logprobs,
+                "text_offset": text_offsets
+            }
+
         respi = {
             "index": idx,
             "finish_reason": stop_reason,
             "text": answer,
-            "logprobs": {'top_logprobs': [logprob_proc.token_alternatives]} if logprob_proc else None,
+            "logprobs": logprobs
+            # "logprobs": {'top_logprobs': [logprob_proc.token_alternatives]} if logprob_proc else None,
         }
 
         resp_list_data.extend([respi])

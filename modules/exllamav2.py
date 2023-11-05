@@ -73,6 +73,7 @@ class Exllamav2Model:
 
         return self.tokenizer.decode(ids)[0]
 
+
     def get_logits(self, token_ids, **kwargs):
         self.cache.current_seq_len = 0
         self.model.forward(token_ids[:, :-1], self.cache, input_mask=None, preprocess_only=True)
@@ -107,10 +108,23 @@ class Exllamav2Model:
         self.cache.current_seq_len = 0
         self.model.forward(ids[:, :-1], self.cache, input_mask=None, preprocess_only=True)
 
+        logit_processor = None
+        if "logits_processor" in state:
+            logit_processor = state['logits_processor']
+
+        print("RESPONSE:")
         has_leading_space = False
+        prev_count = 0
         for i in range(max_new_tokens):
             logits = self.model.forward(ids[:, -1:], self.cache, input_mask=None).float().cpu()
-            token, _, _= ExLlamaV2Sampler.sample(logits, settings, ids, random.random(), self.tokenizer)
+
+            if logit_processor is not None:
+                logits = logit_processor(input_ids=ids, scores=logits.squeeze(1)).unsqueeze(dim=0)
+
+            token, output_probs = ExLlamaV2Sampler.sample(logits, settings, ids, random.random())
+            # token, _a, _b = ExLlamaV2Sampler.sample(logits, settings, ids, random.random(), self.tokenizer)
+
+
             ids = torch.cat([ids, token], dim=1)
 
             if i == 0 and self.tokenizer.tokenizer.IdToPiece(int(token)).startswith('▁'):
@@ -120,10 +134,18 @@ class Exllamav2Model:
             if has_leading_space:
                 decoded_text = ' ' + decoded_text
 
+            new_text = decoded_text[prev_count:]
+            print(new_text, end="")
+            prev_count = len(decoded_text)
+
             yield decoded_text
 
             if token.item() == self.tokenizer.eos_token_id or shared.stop_everything:
                 break
+
+            # if logit_processor is not None:
+            #     logit_processor(input_ids=ids[:, :-1], scores=logits.squeeze(1))
+            #
 
     def generate(self, prompt, state):
         output = ''
