@@ -1,31 +1,25 @@
-aiofiles==23.1.0
-fastapi==0.95.2
-gradio_client==0.2.5
-gradio==3.33.1
-pydantic==1.10.12
-
-accelerate==0.23.*
+accelerate==0.25.*
 colorama
 datasets
 einops
-exllamav2==0.0.5
+exllamav2==0.0.11
+gradio==3.50.*
+hqq==0.1.1
 markdown
-numpy==1.24
-optimum==1.13.1
+numpy==1.24.*
+optimum==1.16.*
 pandas
-peft==0.5.*
+peft==0.7.*
 Pillow>=9.5.0
 pyyaml
 requests
-safetensors==0.3.2
+safetensors==0.4.1
 scipy
 sentencepiece
 tensorboard
-transformers==4.34.*
+transformers==4.36.*
 tqdm
 wandb
-
-git+https://github.com/oobabooga/torch-grammar.git
 
 # bitsandbytes
 bitsandbytes==0.41.1; platform_system != "Windows"
