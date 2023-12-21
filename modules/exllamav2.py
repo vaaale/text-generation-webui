@@ -126,9 +126,18 @@ class Exllamav2Model:
         self.cache.current_seq_len = 0
         self.model.forward(ids[:, :-1], self.cache, input_mask=None, preprocess_only=True, loras=self.loras)
 
+        logit_processor = None
+        if "logits_processor" in state:
+            logit_processor = state['logits_processor']
+
+        print("RESPONSE:")
         has_leading_space = False
+        prev_count = 0
         for i in range(max_new_tokens):
             logits = self.model.forward(ids[:, -1:], self.cache, input_mask=None, loras=self.loras).float().cpu()
+            if logit_processor is not None:
+                logits = logit_processor(input_ids=ids, scores=logits.squeeze(1)).unsqueeze(dim=0)
+
             token, _, _ = ExLlamaV2Sampler.sample(logits, settings, ids, random.random(), self.tokenizer)
             ids = torch.cat([ids, token], dim=1)
 
@@ -146,6 +155,10 @@ class Exllamav2Model:
                 # If we are not at the end of the generation, we skip this token
                 if not (is_last or is_stopping):
                     continue
+
+            new_text = decoded_text[prev_count:]
+            print(new_text, end="")
+            prev_count = len(decoded_text)
 
             if token.item() == self.tokenizer.eos_token_id or shared.stop_everything:
                 break

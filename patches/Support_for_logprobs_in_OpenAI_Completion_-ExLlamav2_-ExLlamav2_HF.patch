@@ -1,0 +1,373 @@
+Subject: [PATCH] Support for logprobs in OpenAI Completion
+-ExLlamav2
+-ExLlamav2_HF
+---
+Index: models/config.yaml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/models/config.yaml b/models/config.yaml
+deleted file mode 100644
+--- a/models/config.yaml	(revision d1eac1edc152d575ebac5f81cf063f67de522add)
++++ /dev/null	(revision d1eac1edc152d575ebac5f81cf063f67de522add)
+@@ -1,190 +0,0 @@
+-.*(llama|alpac|vicuna|guanaco|koala|llava|wizardlm|metharme|pygmalion-7b|pygmalion-2|mythalion|wizard-mega|openbuddy|vigogne|h2ogpt-research|manticore):
+-  model_type: 'llama'
+-.*(opt-|opt_|opt1|opt3|optfor|galactica|galpaca|pygmalion-350m):
+-  model_type: 'opt'
+-.*(gpt-j|gptj|gpt4all-j|malion-6b|pygway|pygmalion-6b|dolly-v1):
+-  model_type: 'gptj'
+-.*(gpt-neox|koalpaca-polyglot|polyglot.*koalpaca|polyglot-ko|polyglot_ko|pythia|stablelm|incite|dolly-v2|polycoder|h2ogpt-oig|h2ogpt-oasst1|h2ogpt-gm):
+-  model_type: 'gptneox'
+-.*bloom:
+-  model_type: 'bloom'
+-.*gpt2:
+-  model_type: 'gpt2'
+-.*falcon:
+-  model_type: 'falcon'
+-.*mpt:
+-  model_type: 'mpt'
+-.*(starcoder|starchat):
+-  model_type: 'starcoder'
+-.*dolly-v2:
+-  model_type: 'dollyv2'
+-.*replit:
+-  model_type: 'replit'
+-.*(oasst|openassistant-|stablelm-7b-sft-v7-epoch-3):
+-  instruction_template: 'Open Assistant'
+-  skip_special_tokens: false
+-(?!.*galactica)(?!.*reward).*openassistant:
+-  instruction_template: 'Open Assistant'
+-  skip_special_tokens: false
+-.*galactica:
+-  skip_special_tokens: false
+-.*dolly-v[0-9]-[0-9]*b:
+-  instruction_template: 'Alpaca'
+-  skip_special_tokens: false
+-.*alpaca-native-4bit:
+-  instruction_template: 'Alpaca'
+-  custom_stopping_strings: '"### End"'
+-.*llava:
+-  instruction_template: 'LLaVA'
+-  custom_stopping_strings: '"\n###"'
+-.*llava.*1.5:
+-  instruction_template: 'Vicuna-v1.1'
+-.*wizard.*mega:
+-  instruction_template: 'Wizard-Mega'
+-  custom_stopping_strings: '"</s>"'
+-.*starchat-beta:
+-  instruction_template: 'Starchat-Beta'
+-  custom_stopping_strings: '"<|end|>"'
+-(?!.*v0)(?!.*1.1)(?!.*1_1)(?!.*stable)(?!.*chinese).*vicuna:
+-  instruction_template: 'Vicuna-v0'
+-.*vicuna.*v0:
+-  instruction_template: 'Vicuna-v0'
+-.*vicuna.*(1.1|1_1|1.3|1_3):
+-  instruction_template: 'Vicuna-v1.1'
+-.*vicuna.*(1.5|1_5):
+-  instruction_template: 'Vicuna-v1.1'
+-.*stable.*vicuna:
+-  instruction_template: 'StableVicuna'
+-(?!.*chat).*chinese-vicuna:
+-  instruction_template: 'Alpaca'
+-.*chinese-vicuna.*chat:
+-  instruction_template: 'Chinese-Vicuna-Chat'
+-.*alpaca:
+-  instruction_template: 'Alpaca'
+-.*koala:
+-  instruction_template: 'Koala'
+-.*chatglm:
+-  instruction_template: 'ChatGLM'
+-.*(metharme|pygmalion|mythalion):
+-  instruction_template: 'Metharme'
+-.*raven:
+-  instruction_template: 'RWKV-Raven'
+-.*moss-moon.*sft:
+-  instruction_template: 'MOSS'
+-.*stablelm-tuned:
+-  instruction_template: 'StableLM'
+-.*galactica.*finetuned:
+-  instruction_template: 'Galactica Finetuned'
+-.*galactica.*-v2:
+-  instruction_template: 'Galactica v2'
+-(?!.*finetuned)(?!.*-v2).*galactica:
+-  instruction_template: 'Galactica'
+-.*guanaco:
+-  instruction_template: 'Guanaco non-chat'
+-.*baize:
+-  instruction_template: 'Baize'
+-.*mpt-.*instruct:
+-  instruction_template: 'Alpaca'
+-.*mpt-.*chat:
+-  instruction_template: 'ChatML'
+-(?!.*-flan-)(?!.*-t5-).*lamini-:
+-  instruction_template: 'Alpaca'
+-.*incite.*chat:
+-  instruction_template: 'INCITE-Chat'
+-.*incite.*instruct:
+-  instruction_template: 'INCITE-Instruct'
+-.*ziya-:
+-  instruction_template: 'Ziya'
+-.*koalpaca:
+-  instruction_template: 'KoAlpaca'
+-.*openbuddy:
+-  instruction_template: 'OpenBuddy'
+-(?!.*chat).*vigogne:
+-  instruction_template: 'Vigogne-Instruct'
+-.*vigogne.*chat:
+-  instruction_template: 'Vigogne-Chat'
+-.*(llama-deus|supercot|llama-natural-instructions|open-llama-0.3t-7b-instruct-dolly-hhrlhf|open-llama-0.3t-7b-open-instruct):
+-  instruction_template: 'Alpaca'
+-.*bactrian:
+-  instruction_template: 'Bactrian'
+-.*(h2ogpt-oig-|h2ogpt-oasst1-|h2ogpt-research-oasst1-):
+-  instruction_template: 'INCITE-Chat'
+-.*h2ogpt-gm-:
+-  instruction_template: 'H2O-prompt_answer'
+-.*manticore:
+-  instruction_template: 'Manticore Chat'
+-.*bluemoonrp-(30|13)b:
+-  instruction_template: 'Bluemoon'
+-.*Nous-Hermes-13b:
+-  instruction_template: 'Alpaca'
+-.*airoboros:
+-  instruction_template: 'Vicuna-v1.1'
+-.*airoboros.*1.2:
+-  instruction_template: 'Airoboros-v1.2'
+-.*alpa(cino|sta):
+-  instruction_template: 'Alpaca'
+-.*hippogriff:
+-  instruction_template: 'Hippogriff'
+-.*lazarus:
+-  instruction_template: 'Alpaca'
+-.*guanaco-.*(7|13|33|65)b:
+-  instruction_template: 'Vicuna-v0'
+-.*hypermantis:
+-  instruction_template: 'Alpaca'
+-.*open-llama-.*-open-instruct:
+-  instruction_template: 'Alpaca'
+-.*starcoder-gpteacher-code-instruct:
+-  instruction_template: 'Alpaca'
+-.*tulu:
+-  instruction_template: 'Tulu'
+-.*chronos:
+-  instruction_template: 'Alpaca'
+-.*samantha:
+-  instruction_template: 'Samantha'
+-.*wizardcoder:
+-  instruction_template: 'Alpaca'
+-.*minotaur:
+-  instruction_template: 'Manticore Chat'
+-.*orca_mini:
+-  instruction_template: 'Orca Mini'
+-.*(platypus|gplatty|superplatty):
+-  instruction_template: 'Alpaca'
+-.*(openorca-platypus2):
+-  instruction_template: 'OpenOrca-Platypus2'
+-  custom_stopping_strings: '"### Instruction:", "### Response:"'
+-.*longchat:
+-  instruction_template: 'Vicuna-v1.1'
+-.*vicuna-33b:
+-  instruction_template: 'Vicuna-v1.1'
+-.*redmond-hermes-coder:
+-  instruction_template: 'Alpaca'
+-.*wizardcoder-15b:
+-  instruction_template: 'Alpaca'
+-.*wizardlm:
+-  instruction_template: 'Vicuna-v1.1'
+-.*godzilla:
+-  instruction_template: 'Alpaca'
+-.*llama(-?)(2|v2).*chat:
+-  instruction_template: 'Llama-v2'
+-.*newhope:
+-  instruction_template: 'NewHope'
+-.*stablebeluga2:
+-  instruction_template: 'StableBeluga2'
+-.*openchat:
+-  instruction_template: 'OpenChat'
+-.*codellama.*instruct:
+-  instruction_template: 'Llama-v2'
+-.*(mistral|mixtral).*instruct:
+-  instruction_template: 'Mistral'
+-.*mistral.*openorca:
+-  instruction_template: 'ChatML'
+-.*(WizardCoder-Python-34B-V1.0|Phind-CodeLlama-34B-v2|CodeBooga-34B-v0.1):
+-  instruction_template: 'Alpaca'
+-.*orca-2-(13|7)b:
+-  instruction_template: 'ChatML'
+-.*openhermes.*mistral:
+-  instruction_template: 'ChatML'
+-.*Yi-34B-Chat:
+-  instruction_template: 'ChatML'
+-(dolphin).*:
+-  instruction_template: 'ChatML'
+Index: extensions/openai/completions.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/extensions/openai/completions.py b/extensions/openai/completions.py
+--- a/extensions/openai/completions.py	(revision d1eac1edc152d575ebac5f81cf063f67de522add)
++++ b/extensions/openai/completions.py	(date 1703163017431)
+@@ -42,11 +42,43 @@
+         return f"<{self.__class__.__name__}(logit_bias={self.logit_bias})>"
+ 
+ 
++# class LogprobProcessor(LogitsProcessor):
++#     def __init__(self, logprobs=None):
++#         self.logprobs = logprobs
++#         self.token_alternatives = {}
++#
++#     def __call__(self, input_ids: torch.LongTensor, logits: torch.FloatTensor) -> torch.FloatTensor:
++#         if self.logprobs is not None:  # 0-5
++#             log_e_probabilities = F.log_softmax(logits, dim=1)
++#             top_values, top_indices = torch.topk(log_e_probabilities, k=self.logprobs + 1)
++#             top_tokens = [decode(tok) for tok in top_indices[0]]
++#             top_probs = [float(x) for x in top_values[0]]
++#             self.token_alternatives = dict(zip(top_tokens, top_probs))
++#             debug_msg(repr(self))
++#
++#         return logits
++#
++#     def __repr__(self):
++#         return f"<{self.__class__.__name__}(logprobs={self.logprobs}, token_alternatives={self.token_alternatives})>"
+ class LogprobProcessor(LogitsProcessor):
++    _counter = 0
++
+     def __init__(self, logprobs=None):
++        self.id = LogprobProcessor._counter
++        LogprobProcessor._counter += 1
+         self.logprobs = logprobs
+         self.token_alternatives = {}
+ 
++        self.tokens = []
++        self.tokens_ids = []
++        self.token_logprobs = []
++        self.top_probs = []
++        self.top_toks = []
++        self.top_inds = []
++        self.prev_logits = None
++        self.prev_top_values = None
++        self.prev_top_ind = None
++
+     def __call__(self, input_ids: torch.LongTensor, logits: torch.FloatTensor) -> torch.FloatTensor:
+         if self.logprobs is not None:  # 0-5
+             log_e_probabilities = F.log_softmax(logits, dim=1)
+@@ -54,8 +86,23 @@
+             top_tokens = [decode(tok) for tok in top_indices[0]]
+             top_probs = [float(x) for x in top_values[0]]
+             self.token_alternatives = dict(zip(top_tokens, top_probs))
++
++            if self.prev_logits is not None:
++                prev_gen_ind = input_ids[0][-1].item()
++                prev_gen_prob = self.prev_logits[prev_gen_ind].item()
++                self.tokens_ids.append(prev_gen_ind)
++                self.tokens.append(decode(torch.tensor(prev_gen_ind)))
++                self.token_logprobs.append(prev_gen_prob)
++
++            self.prev_logits = log_e_probabilities[0]
++            self.prev_top_values = top_values
++            self.prev_top_ind = top_indices
++
++            self.top_probs.append(top_probs)
++            self.top_toks.append(top_tokens)
++            self.top_inds.append([v.item() for v in top_indices[0]])
++
+             debug_msg(repr(self))
+-
+         return logits
+ 
+     def __repr__(self):
+@@ -352,6 +399,7 @@
+     generate_params['stream'] = stream
+     requested_model = generate_params.pop('model')
+     logprob_proc = generate_params.pop('logprob_proc', None)
++    stopping_strings = generate_params.pop('stopping_strings', [])
+     suffix = body['suffix'] if body['suffix'] else ''
+     echo = body['echo']
+ 
+@@ -394,11 +442,42 @@
+             if token_count + completion_token_count >= generate_params['truncation_length'] or completion_token_count >= max_tokens:
+                 stop_reason = "length"
+ 
++            ### LogProbs
++            logprobs = None
++            if logprob_proc:
++                top_logprobs = [{tok: p for tok, p in zip(tokens, probs)} for tokens, probs in
++                                zip(logprob_proc.top_toks, logprob_proc.top_probs)][:-1]
++                tokens = logprob_proc.tokens
++                log_probs = logprob_proc.token_logprobs
++                text_offsets = []
++                offset = 0
++                for i, tok in enumerate(tokens):
++                    if tok in ['<0x0A>']:
++                        tok = '\n'
++                    tmp = answer[offset:]
++                    if tok in stopping_strings:
++                        break
++                    ind = tmp.find(tok)
++                    if ind == -1 and i == (len(tokens) - 1):
++                        break
++
++                    text_offsets.append(len(prompt) + (offset + ind))
++                    offset += ind
++
++                logprobs = {
++                    "tokens": tokens,
++                    "token_logprobs": log_probs,
++                    "top_logprobs": top_logprobs,
++                    "text_offset": text_offsets
++                }
++            ### LogProbs
++
+             respi = {
+                 "index": idx,
+                 "finish_reason": stop_reason,
+                 "text": prefix + answer + suffix,
+-                "logprobs": {'top_logprobs': [logprob_proc.token_alternatives]} if logprob_proc else None,
++                "logprobs": logprobs
++                # "logprobs": {'top_logprobs': [logprob_proc.token_alternatives]} if logprob_proc else None,
+             }
+ 
+             resp_list_data.extend([respi])
+Index: modules/exllamav2.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/modules/exllamav2.py b/modules/exllamav2.py
+--- a/modules/exllamav2.py	(revision d1eac1edc152d575ebac5f81cf063f67de522add)
++++ b/modules/exllamav2.py	(date 1703161126531)
+@@ -126,9 +126,18 @@
+         self.cache.current_seq_len = 0
+         self.model.forward(ids[:, :-1], self.cache, input_mask=None, preprocess_only=True, loras=self.loras)
+ 
++        logit_processor = None
++        if "logits_processor" in state:
++            logit_processor = state['logits_processor']
++
++        print("RESPONSE:")
+         has_leading_space = False
++        prev_count = 0
+         for i in range(max_new_tokens):
+             logits = self.model.forward(ids[:, -1:], self.cache, input_mask=None, loras=self.loras).float().cpu()
++            if logit_processor is not None:
++                logits = logit_processor(input_ids=ids, scores=logits.squeeze(1)).unsqueeze(dim=0)
++
+             token, _, _ = ExLlamaV2Sampler.sample(logits, settings, ids, random.random(), self.tokenizer)
+             ids = torch.cat([ids, token], dim=1)
+ 
+@@ -147,6 +156,10 @@
+                 if not (is_last or is_stopping):
+                     continue
+ 
++            new_text = decoded_text[prev_count:]
++            print(new_text, end="")
++            prev_count = len(decoded_text)
++
+             if token.item() == self.tokenizer.eos_token_id or shared.stop_everything:
+                 break
+ 
+diff --git a/models/place-your-models-here.txt b/models/place-your-models-here.txt
+deleted file mode 100644

@@ -42,10 +42,42 @@ class LogitsBiasProcessor(LogitsProcessor):
         return f"<{self.__class__.__name__}(logit_bias={self.logit_bias})>"
 
 
+# class LogprobProcessor(LogitsProcessor):
+#     def __init__(self, logprobs=None):
+#         self.logprobs = logprobs
+#         self.token_alternatives = {}
+#
+#     def __call__(self, input_ids: torch.LongTensor, logits: torch.FloatTensor) -> torch.FloatTensor:
+#         if self.logprobs is not None:  # 0-5
+#             log_e_probabilities = F.log_softmax(logits, dim=1)
+#             top_values, top_indices = torch.topk(log_e_probabilities, k=self.logprobs + 1)
+#             top_tokens = [decode(tok) for tok in top_indices[0]]
+#             top_probs = [float(x) for x in top_values[0]]
+#             self.token_alternatives = dict(zip(top_tokens, top_probs))
+#             debug_msg(repr(self))
+#
+#         return logits
+#
+#     def __repr__(self):
+#         return f"<{self.__class__.__name__}(logprobs={self.logprobs}, token_alternatives={self.token_alternatives})>"
 class LogprobProcessor(LogitsProcessor):
+    _counter = 0
+
     def __init__(self, logprobs=None):
+        self.id = LogprobProcessor._counter
+        LogprobProcessor._counter += 1
         self.logprobs = logprobs
         self.token_alternatives = {}
+
+        self.tokens = []
+        self.tokens_ids = []
+        self.token_logprobs = []
+        self.top_probs = []
+        self.top_toks = []
+        self.top_inds = []
+        self.prev_logits = None
+        self.prev_top_values = None
+        self.prev_top_ind = None
 
     def __call__(self, input_ids: torch.LongTensor, logits: torch.FloatTensor) -> torch.FloatTensor:
         if self.logprobs is not None:  # 0-5
@@ -54,8 +86,23 @@ class LogprobProcessor(LogitsProcessor):
             top_tokens = [decode(tok) for tok in top_indices[0]]
             top_probs = [float(x) for x in top_values[0]]
             self.token_alternatives = dict(zip(top_tokens, top_probs))
-            debug_msg(repr(self))
 
+            if self.prev_logits is not None:
+                prev_gen_ind = input_ids[0][-1].item()
+                prev_gen_prob = self.prev_logits[prev_gen_ind].item()
+                self.tokens_ids.append(prev_gen_ind)
+                self.tokens.append(decode(torch.tensor(prev_gen_ind)))
+                self.token_logprobs.append(prev_gen_prob)
+
+            self.prev_logits = log_e_probabilities[0]
+            self.prev_top_values = top_values
+            self.prev_top_ind = top_indices
+
+            self.top_probs.append(top_probs)
+            self.top_toks.append(top_tokens)
+            self.top_inds.append([v.item() for v in top_indices[0]])
+
+            debug_msg(repr(self))
         return logits
 
     def __repr__(self):
@@ -352,6 +399,7 @@ def completions_common(body: dict, is_legacy: bool = False, stream=False):
     generate_params['stream'] = stream
     requested_model = generate_params.pop('model')
     logprob_proc = generate_params.pop('logprob_proc', None)
+    stopping_strings = generate_params.pop('stopping_strings', [])
     suffix = body['suffix'] if body['suffix'] else ''
     echo = body['echo']
 
@@ -394,11 +442,42 @@ def completions_common(body: dict, is_legacy: bool = False, stream=False):
             if token_count + completion_token_count >= generate_params['truncation_length'] or completion_token_count >= max_tokens:
                 stop_reason = "length"
 
+            ### LogProbs
+            logprobs = None
+            if logprob_proc:
+                top_logprobs = [{tok: p for tok, p in zip(tokens, probs)} for tokens, probs in
+                                zip(logprob_proc.top_toks, logprob_proc.top_probs)][:-1]
+                tokens = logprob_proc.tokens
+                log_probs = logprob_proc.token_logprobs
+                text_offsets = []
+                offset = 0
+                for i, tok in enumerate(tokens):
+                    if tok in ['<0x0A>']:
+                        tok = '\n'
+                    tmp = answer[offset:]
+                    if tok in stopping_strings:
+                        break
+                    ind = tmp.find(tok)
+                    if ind == -1 and i == (len(tokens) - 1):
+                        break
+
+                    text_offsets.append(len(prompt) + (offset + ind))
+                    offset += ind
+
+                logprobs = {
+                    "tokens": tokens,
+                    "token_logprobs": log_probs,
+                    "top_logprobs": top_logprobs,
+                    "text_offset": text_offsets
+                }
+            ### LogProbs
+
             respi = {
                 "index": idx,
                 "finish_reason": stop_reason,
                 "text": prefix + answer + suffix,
-                "logprobs": {'top_logprobs': [logprob_proc.token_alternatives]} if logprob_proc else None,
+                "logprobs": logprobs
+                # "logprobs": {'top_logprobs': [logprob_proc.token_alternatives]} if logprob_proc else None,
             }
 
             resp_list_data.extend([respi])
