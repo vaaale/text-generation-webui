@@ -43,6 +43,8 @@ loaders_and_params = OrderedDict({
         'compress_pos_emb',
         'cpu',
         'numa',
+        'no_offload_kqv',
+        'tensorcores',
     ],
     'llamacpp_HF': [
         'n_ctx',
@@ -63,6 +65,8 @@ loaders_and_params = OrderedDict({
         'trust_remote_code',
         'no_use_fast',
         'logits_all',
+        'no_offload_kqv',
+        'tensorcores',
         'llamacpp_HF_info',
     ],
     'ExLlamav2_HF': [
