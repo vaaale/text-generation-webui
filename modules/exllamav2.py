@@ -89,8 +89,7 @@ class Exllamav2Model:
         if token_ids.shape[-1] > 1:
             self.model.forward(token_ids[:, :-1], self.cache, input_mask=None, preprocess_only=True, loras=self.loras)
 
-        return self.model.forward(token_ids[:, -1:], self.cache, input_mask=None, loras=self.loras,
-                                  **kwargs).float().cpu()
+        return self.model.forward(token_ids[:, -1:], self.cache, input_mask=None, loras=self.loras, **kwargs).float().cpu()
 
     def generate_with_streaming(self, prompt, state):
         settings = ExLlamaV2Sampler.Settings()
@@ -104,8 +103,7 @@ class Exllamav2Model:
         settings.mirostat_tau = state['mirostat_tau']
         settings.mirostat_eta = state['mirostat_eta']
         settings.token_repetition_penalty = state['repetition_penalty']
-        settings.token_repetition_range = -1 if state['repetition_penalty_range'] <= 0 else state[
-            'repetition_penalty_range']
+        settings.token_repetition_range = -1 if state['repetition_penalty_range'] <= 0 else state['repetition_penalty_range']
         if state['ban_eos_token']:
             settings.disallow_tokens(self.tokenizer, [self.tokenizer.eos_token_id])
 
