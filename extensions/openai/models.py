@@ -30,6 +30,19 @@ def list_dummy_models():
     return result
 
 
+def list_models_openai():
+    result = {
+        "object": "list",
+        "data": []
+    }
+
+    # these are expected by so much, so include some here as a dummy
+    for model in get_available_models()[1:]:
+        result["data"].append(model_info_dict(model))
+
+    return result
+
+
 def model_info_dict(model_name: str) -> dict:
     return {
         "id": model_name,

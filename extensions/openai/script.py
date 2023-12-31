@@ -96,7 +96,8 @@ async def options_route():
 async def openai_completions(request: Request, request_data: CompletionRequest):
     path = request.url.path
     is_legacy = "/generate" in path
-
+    foo = await request.body()
+    bar = await request.json()
     if request_data.stream:
         async def generator():
             async with streaming_semaphore:
@@ -112,6 +113,7 @@ async def openai_completions(request: Request, request_data: CompletionRequest):
 
     else:
         response = OAIcompletions.completions(to_dict(request_data), is_legacy=is_legacy)
+        print(f"Generated Response:\n{response['choices'][0]['text']}")
         return JSONResponse(response)
 
 
@@ -119,6 +121,7 @@ async def openai_completions(request: Request, request_data: CompletionRequest):
 async def openai_chat_completions(request: Request, request_data: ChatCompletionRequest):
     path = request.url.path
     is_legacy = "/generate" in path
+    bar = await request.json()
 
     if request_data.stream:
         async def generator():
@@ -145,7 +148,8 @@ async def handle_models(request: Request):
     is_list = request.url.path.split('?')[0].split('#')[0] == '/v1/models'
 
     if is_list:
-        response = OAImodels.list_dummy_models()
+        # response = OAImodels.list_dummy_models()
+        response = OAImodels.list_models_openai()
     else:
         model_name = path[len('/v1/models/'):]
         response = OAImodels.model_info_dict(model_name)

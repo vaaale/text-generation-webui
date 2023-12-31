@@ -80,6 +80,7 @@ class ChatCompletionRequestParams(BaseModel):
     function_call: str | dict | None = Field(default=None, description="Unused parameter.")
     functions: List[dict] | None = Field(default=None, description="Unused parameter.")
     logit_bias: dict | None = None
+    logprobs: int | None = None
     max_tokens: int | None = None
     n: int | None = Field(default=1, description="Unused parameter.")
     presence_penalty: float | None = 0

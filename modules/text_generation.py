@@ -73,9 +73,12 @@ def _generate_reply(question, state, stopping_strings=None, is_chat=False, escap
     last_update = -1
     reply = ''
     is_stream = state['stream']
+    keep_logits_proc = state["logits_processor"]
     if len(all_stop_strings) > 0 and not state['stream']:
         state = copy.deepcopy(state)
         state['stream'] = True
+
+    state["logits_processor"] = keep_logits_proc
 
     # Generate
     for reply in generate_func(question, original_question, seed, state, stopping_strings, is_chat=is_chat):

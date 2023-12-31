@@ -66,6 +66,7 @@ class LogprobProcessor(LogitsProcessor):
     def __init__(self, logprobs=None):
         self.id = LogprobProcessor._counter
         LogprobProcessor._counter += 1
+        self.my_counter = LogprobProcessor._counter
         self.logprobs = logprobs
         self.token_alternatives = {}
 
@@ -263,6 +264,8 @@ def chat_completions_common(body: dict, is_legacy: bool = False, stream=False) -
     name2 = body['name2'] or name2
     context = body['context'] or context
     greeting = body['greeting'] or greeting
+    stopping_strings = generate_params.pop('stopping_strings', [])
+    logprob_proc = generate_params.pop('logprob_proc', None)
 
     # History
     user_input, custom_system_message, history = convert_history(messages)
@@ -287,7 +290,6 @@ def chat_completions_common(body: dict, is_legacy: bool = False, stream=False) -
         generate_params['auto_max_new_tokens'] = True
 
     requested_model = generate_params.pop('model')
-    logprob_proc = generate_params.pop('logprob_proc', None)
 
     def chat_streaming_chunk(content):
         # begin streaming
@@ -304,7 +306,6 @@ def chat_completions_common(body: dict, is_legacy: bool = False, stream=False) -
                 "delta": {'role': 'assistant', 'content': content},
             }],
         }
-
         if logprob_proc:  # not official for chat yet
             top_logprobs = convert_logprobs_to_tiktoken(model=requested_model, logprobs=logprob_proc.token_alternatives)
             chunk[resp_list][0]["logprobs"] = {'top_logprobs': [top_logprobs]}
@@ -356,6 +357,36 @@ def chat_completions_common(body: dict, is_legacy: bool = False, stream=False) -
 
         yield chunk
     else:
+        ### LogProbs
+        logprobs = None
+        if logprob_proc:
+            top_logprobs = [{tok: p for tok, p in zip(tokens, probs)} for tokens, probs in
+                            zip(logprob_proc.top_toks, logprob_proc.top_probs)][:-1]
+            tokens = logprob_proc.tokens
+            log_probs = logprob_proc.token_logprobs
+            text_offsets = []
+            offset = 0
+            for i, tok in enumerate(tokens):
+                if tok in ['<0x0A>']:
+                    tok = '\n'
+                tmp = answer[offset:]
+                if tok in stopping_strings:
+                    break
+                ind = tmp.find(tok)
+                if ind == -1 and i == (len(tokens) - 1):
+                    break
+
+                text_offsets.append(len(prompt) + (offset + ind))
+                offset += ind
+
+            logprobs = {
+                "tokens": tokens,
+                "token_logprobs": log_probs,
+                "top_logprobs": top_logprobs,
+                "text_offset": text_offsets
+            }
+        ###  LogProbs
+
         resp = {
             "id": cmpl_id,
             "object": object_type,
@@ -364,7 +395,8 @@ def chat_completions_common(body: dict, is_legacy: bool = False, stream=False) -
             resp_list: [{
                 "index": 0,
                 "finish_reason": stop_reason,
-                "message": {"role": "assistant", "content": answer}
+                "message": {"role": "assistant", "content": answer},
+                "logprobs": logprobs
             }],
             "usage": {
                 "prompt_tokens": token_count,
@@ -372,12 +404,6 @@ def chat_completions_common(body: dict, is_legacy: bool = False, stream=False) -
                 "total_tokens": token_count + completion_token_count
             }
         }
-        if logprob_proc:  # not official for chat yet
-            top_logprobs = convert_logprobs_to_tiktoken(model=requested_model, logprobs=logprob_proc.token_alternatives)
-            resp[resp_list][0]["logprobs"] = {'top_logprobs': [top_logprobs]}
-        # else:
-        #     resp[resp_list][0]["logprobs"] = None
-
         yield resp
 
 
